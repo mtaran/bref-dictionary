@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16161a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="bref">
+<meta name="description" content="Searchable dictionary for bref, the alphabetic shorthand system by Donald M. Volk — 11,660 words and 3,037 phrases, searchable in both directions, works offline.">
+<title>bref Dictionary</title>
+<style>
+  :root {
+    /* Light theme — warm paper with red ink. */
+    --bg: #fbfbfa;
+    --fg: #1c1c1a;
+    --muted: #6d6d68;
+    --card: #ffffff;
+    --accent: #a83c38;
+    --border: #e2e1dc;
+    --mark: rgba(240, 176, 100, 0.45);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* Dark theme — ink with warm highlights. */
+      --bg: #16161a;
+      --fg: #e9e8e4;
+      --muted: #93928c;
+      --card: #1e1e23;
+      --accent: #f0847f;
+      --border: #2e2e34;
+      --mark: rgba(240, 132, 127, 0.28);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scrollbar-width: none; -ms-overflow-style: none; }
+  html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--fg);
+    line-height: 1.4;
+    scrollbar-width: none; -ms-overflow-style: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    position: sticky; top: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px 10px;
+    z-index: 10;
+  }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0 8px 0 0; font-weight: 600; }
+  h1 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  input[type=search] {
+    flex: 1 1 240px;
+    font-size: 18px; padding: 8px 12px;
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 6px;
+    min-width: 0;
+  }
+  input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+              font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .controls label { cursor: pointer; white-space: nowrap; }
+  .controls input { vertical-align: middle; margin-right: 4px; accent-color: var(--accent); }
+  .sep { width: 1px; align-self: stretch; background: var(--border); }
+  #stats { color: var(--muted); font-size: 13px; margin-left: auto; }
+  main { padding: 12px 16px 60px; max-width: 880px; margin: 0 auto; }
+  .entry {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .word { font-weight: 600; font-size: 17px; color: var(--accent); overflow-wrap: anywhere; }
+  .brf { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+         letter-spacing: 0.03em; }
+  .dir { font-size: 11px; color: var(--muted); text-transform: uppercase;
+         letter-spacing: 0.04em; padding: 1px 5px; border: 1px solid var(--border);
+         border-radius: 3px; white-space: nowrap; }
+  .kind { font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
+          padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; }
+  .translations { margin-top: 4px; }
+  .trans { display: inline-block; margin-right: 10px; overflow-wrap: anywhere; }
+  .len { font-size: 11px; color: var(--muted); vertical-align: super; margin-left: 3px; }
+  .loading, .empty { padding: 30px 16px; text-align: center; color: var(--muted); }
+  .source { font-size: 12px; color: var(--muted); margin-top: 20px; text-align: center;
+            line-height: 1.7; }
+  .source a { color: var(--muted); }
+  mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>bref <small>dictionary</small></h1>
+    <input id="q" type="search" placeholder="Search either direction (e.g. because, bcs, tt)…"
+           autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+  </div>
+  <div class="controls">
+    <label><input type="radio" name="dir" value="both" checked> Both</label>
+    <label><input type="radio" name="dir" value="en"> English → bref</label>
+    <label><input type="radio" name="dir" value="bref"> bref → English</label>
+    <span class="sep"></span>
+    <label><input type="radio" name="kind" value="all" checked> All</label>
+    <label><input type="radio" name="kind" value="word"> Words</label>
+    <label><input type="radio" name="kind" value="phrase"> Phrases</label>
+    <span class="sep"></span>
+    <label><input type="checkbox" id="trans-search" checked> Also search the other side</label>
+    <span id="stats">loading…</span>
+  </div>
+</header>
+<main>
+  <div id="results" class="loading">Loading dictionary…</div>
+  <div class="source" id="source"></div>
+</main>
+<script>
+(async function() {
+  const $ = (s) => document.querySelector(s);
+  const resultsEl = $('#results');
+  const stats = $('#stats');
+  const qInput = $('#q');
+  const dirInputs = document.querySelectorAll('input[name=dir]');
+  const kindInputs = document.querySelectorAll('input[name=kind]');
+  const transSearch = $('#trans-search');
+
+  let DATA = null;
+  try {
+    const res = await fetch('dictionary.json');
+    DATA = await res.json();
+  } catch (e) {
+    resultsEl.textContent = 'Failed to load dictionary.json: ' + e.message;
+    return;
+  }
+
+  const escapeHTML = (s) => s.replace(/[&<>"]/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  $('#source').innerHTML =
+    escapeHTML(DATA.source) +
+    ' · <a href="' + DATA.source_url + '">announcement</a>' +
+    ' · <a href="' + DATA.materials_url + '">manual &amp; word lists</a>' +
+    ' · <a href="https://mtaran.github.io/bref-shorthand/">rules &amp; core vocabulary</a>' +
+    '<br>' + escapeHTML(DATA.note) +
+    '<br>Shared freely by the author: “This is not a commercial product. It is not ' +
+    'for sale… It is completely free to explore and find what is useful.”';
+
+  stats.textContent = DATA.counts.words.toLocaleString() + ' words · '
+                    + DATA.counts.phrases.toLocaleString() + ' phrases';
+
+  // bref is a bijection, so each stored pair yields one entry per direction.
+  const entries = [];
+  for (const [kind, list] of [['word', DATA.words], ['phrase', DATA.phrases]]) {
+    for (const [english, bref] of list) {
+      const enLow = english.toLowerCase(), brefLow = bref.toLowerCase();
+      entries.push({ dir: 'en', kind, head: english, other: bref,
+                     headLow: enLow, otherLow: brefLow });
+      entries.push({ dir: 'bref', kind, head: bref, other: english,
+                     headLow: brefLow, otherLow: enLow });
+    }
+  }
+
+  const highlight = (text, q) => {
+    if (!q) return escapeHTML(text);
+    const escaped = escapeHTML(text);
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    return escaped.replace(re, '<mark>$1</mark>');
+  };
+
+  function score(e, q) {
+    if (!q) return 1;
+    const headLow = e.headLow;
+    if (headLow === q) return 1000;
+    if (headLow.startsWith(q + ' ')) return 700;
+    if (headLow.startsWith(q)) return 500;
+    const pos = headLow.indexOf(q);
+    if (pos >= 0) return 250 - pos;
+    if (transSearch.checked) {
+      const other = e.otherLow;
+      if (other === q) return 120;
+      if (other.startsWith(q)) return 60;
+      if (other.includes(q)) return 20;
+    }
+    return 0;
+  }
+
+  function renderEntry(e, q) {
+    const headCls = e.dir === 'bref' ? 'word brf' : 'word';
+    const otherCls = e.dir === 'bref' ? 'trans' : 'trans brf';
+    const label = e.dir === 'bref' ? 'bref → en' : 'en → bref';
+    const len = e.dir === 'bref' ? e.head.length : e.other.length;
+    return '<div class="entry">' +
+      '<div class="head">' +
+        '<span class="' + headCls + '">' + highlight(e.head, q) + '</span>' +
+        '<span class="dir">' + label + '</span>' +
+        '<span class="kind">' + e.kind + '</span>' +
+      '</div>' +
+      '<div class="translations">' +
+        '<span class="' + otherCls + '">' + highlight(e.other, q) +
+        '<span class="len">' + len + '</span></span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  const LIMIT = 200;
+  function render() {
+    const q = qInput.value.trim().toLowerCase();
+    const dir = document.querySelector('input[name=dir]:checked').value;
+    const kind = document.querySelector('input[name=kind]:checked').value;
+
+    const matches = [];
+    for (const e of entries) {
+      if (dir !== 'both' && e.dir !== dir) continue;
+      if (kind !== 'all' && e.kind !== kind) continue;
+      const s = score(e, q);
+      if (s > 0) matches.push([s, e]);
+    }
+    matches.sort((a, b) => b[0] - a[0] || (a[1].head < b[1].head ? -1 : 1));
+
+    const total = matches.length;
+    const shown = matches.slice(0, LIMIT);
+    if (total === 0) {
+      resultsEl.className = 'empty';
+      resultsEl.textContent = q ? 'No matches for "' + q + '".' : 'Nothing to show.';
+      return;
+    }
+    resultsEl.className = '';
+    const footer = total > shown.length
+      ? '<div class="loading">Showing first ' + shown.length + ' of '
+        + total.toLocaleString() + ' matches.</div>'
+      : '';
+    resultsEl.innerHTML = shown.map(([_, e]) => renderEntry(e, q)).join('') + footer;
+  }
+
+  qInput.addEventListener('input', render);
+  dirInputs.forEach(r => r.addEventListener('change', render));
+  kindInputs.forEach(r => r.addEventListener('change', render));
+  transSearch.addEventListener('change', render);
+  render();
+
+  const focusSearch = () => { qInput.focus(); qInput.select(); };
+
+  // "/" focuses the search box (unless the user's already typing in an input).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault();
+    focusSearch();
+  });
+
+  // Re-grab focus when the page becomes visible again — but not on touch
+  // devices, where it would pop the on-screen keyboard unbidden.
+  const hasKeyboard = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (hasKeyboard) {
+    window.addEventListener('focus', focusSearch);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') focusSearch();
+    });
+  }
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
