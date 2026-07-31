@@ -145,8 +145,8 @@
 
   $('#source').innerHTML =
     escapeHTML(DATA.source) +
-    ' · <a href="' + DATA.source_url + '">announcement</a>' +
-    ' · <a href="' + DATA.materials_url + '">manual &amp; word lists</a>' +
+    ' · <a href="' + escapeHTML(DATA.source_url) + '">announcement</a>' +
+    ' · <a href="' + escapeHTML(DATA.materials_url) + '">manual &amp; word lists</a>' +
     ' · <a href="https://mtaran.github.io/bref-shorthand/">rules &amp; core vocabulary</a>' +
     '<br>' + escapeHTML(DATA.note) +
     '<br>Shared freely by the author: “This is not a commercial product. It is not ' +
@@ -256,15 +256,13 @@
     focusSearch();
   });
 
-  // Re-grab focus when the page becomes visible again — but not on touch
-  // devices, where it would pop the on-screen keyboard unbidden.
-  const hasKeyboard = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  if (hasKeyboard) {
-    window.addEventListener('focus', focusSearch);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') focusSearch();
-    });
-  }
+  // Re-grab focus whenever the page becomes visible/focused again. This is also
+  // what raises the on-screen keyboard when the app is launched from a home
+  // screen shortcut, which is the point: open it and start typing.
+  window.addEventListener('focus', focusSearch);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') focusSearch();
+  });
 })();
 
 if ('serviceWorker' in navigator) {
