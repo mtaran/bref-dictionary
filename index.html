@@ -145,8 +145,8 @@
 
   $('#source').innerHTML =
     escapeHTML(DATA.source) +
-    ' · <a href="' + DATA.source_url + '">announcement</a>' +
-    ' · <a href="' + DATA.materials_url + '">manual &amp; word lists</a>' +
+    ' · <a href="' + escapeHTML(DATA.source_url) + '">announcement</a>' +
+    ' · <a href="' + escapeHTML(DATA.materials_url) + '">manual &amp; word lists</a>' +
     ' · <a href="https://mtaran.github.io/bref-shorthand/">rules &amp; core vocabulary</a>' +
     '<br>' + escapeHTML(DATA.note) +
     '<br>Shared freely by the author: “This is not a commercial product. It is not ' +
