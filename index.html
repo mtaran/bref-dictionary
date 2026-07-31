@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#16161a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="bref">
-<meta name="description" content="Searchable dictionary for bref, the alphabetic shorthand system by Donald M. Volk — 11,660 words and 3,037 phrases, searchable in both directions, works offline.">
+<meta name="description" content="Searchable dictionary for bref, the alphabetic shorthand system by Donald M. Volk — 11,660 words, searchable in both directions, with an English-to-bref converter. Works offline.">
 <title>bref Dictionary</title>
 <style>
   :root {
@@ -22,6 +22,7 @@
     --accent: #a83c38;
     --border: #e2e1dc;
     --mark: rgba(240, 176, 100, 0.45);
+    --scrim: rgba(28, 28, 26, 0.42);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -33,6 +34,7 @@
       --accent: #f0847f;
       --border: #2e2e34;
       --mark: rgba(240, 132, 127, 0.28);
+      --scrim: rgba(0, 0, 0, 0.62);
     }
   }
   * { box-sizing: border-box; }
@@ -46,6 +48,7 @@
     scrollbar-width: none; -ms-overflow-style: none;
     -webkit-text-size-adjust: 100%;
   }
+  body.modal-open { overflow: hidden; }
   header {
     position: sticky; top: 0;
     background: var(--bg);
@@ -65,11 +68,16 @@
   }
   input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-              font-size: 14px; color: var(--muted); margin-top: 6px; }
-  .controls label { cursor: pointer; white-space: nowrap; }
-  .controls input { vertical-align: middle; margin-right: 4px; accent-color: var(--accent); }
-  .sep { width: 1px; align-self: stretch; background: var(--border); }
+              font-size: 14px; color: var(--muted); margin-top: 8px; }
   #stats { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .btn {
+    font: inherit; font-size: 13px;
+    color: var(--accent); background: var(--card);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 12px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   main { padding: 12px 16px 60px; max-width: 880px; margin: 0 auto; }
   .entry {
     background: var(--card);
@@ -85,8 +93,6 @@
   .dir { font-size: 11px; color: var(--muted); text-transform: uppercase;
          letter-spacing: 0.04em; padding: 1px 5px; border: 1px solid var(--border);
          border-radius: 3px; white-space: nowrap; }
-  .kind { font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
-          padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; }
   .translations { margin-top: 4px; }
   .trans { display: inline-block; margin-right: 10px; overflow-wrap: anywhere; }
   .len { font-size: 11px; color: var(--muted); vertical-align: super; margin-left: 3px; }
@@ -95,6 +101,61 @@
             line-height: 1.7; }
   .source a { color: var(--muted); }
   mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 2px; }
+
+  /* Converter — a modal view, deliberately separate from the dictionary. */
+  .modal {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--scrim);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal[hidden] { display: none; }
+  .sheet {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: min(720px, 100%);
+    max-height: 100%;
+    display: flex; flex-direction: column;
+    padding: 14px 16px 16px;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  }
+  .sheet-head { display: flex; align-items: baseline; gap: 10px; }
+  .sheet-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .sheet-head p { margin: 0; font-size: 12px; color: var(--muted); }
+  .icon {
+    margin-left: auto; font: inherit; font-size: 22px; line-height: 1;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; padding: 0 4px;
+  }
+  .icon:hover { color: var(--accent); }
+  .lblrow { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; }
+  .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase;
+         letter-spacing: 0.05em; }
+  .lblrow .btn { margin-left: auto; }
+  #conv-in, .out {
+    width: 100%;
+    font-size: 15px; line-height: 1.55;
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px;
+  }
+  #conv-in { font-family: inherit; min-height: 7.5em; resize: vertical; }
+  #conv-in:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .out {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    min-height: 7.5em; color: var(--accent);
+  }
+  .out .unk {
+    color: var(--muted);
+    text-decoration: underline dotted currentColor;
+    text-underline-offset: 3px;
+  }
+  .out .ph { color: var(--muted); font-family: inherit; font-style: italic; }
+  .convstats { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 1.5em; }
+  .convnote { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -105,15 +166,7 @@
            autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
   </div>
   <div class="controls">
-    <label><input type="radio" name="dir" value="both" checked> Both</label>
-    <label><input type="radio" name="dir" value="en"> English → bref</label>
-    <label><input type="radio" name="dir" value="bref"> bref → English</label>
-    <span class="sep"></span>
-    <label><input type="radio" name="kind" value="all" checked> All</label>
-    <label><input type="radio" name="kind" value="word"> Words</label>
-    <label><input type="radio" name="kind" value="phrase"> Phrases</label>
-    <span class="sep"></span>
-    <label><input type="checkbox" id="trans-search" checked> Also search the other side</label>
+    <button type="button" id="conv-open" class="btn">converter</button>
     <span id="stats">loading…</span>
   </div>
 </header>
@@ -121,15 +174,35 @@
   <div id="results" class="loading">Loading dictionary…</div>
   <div class="source" id="source"></div>
 </main>
+
+<div id="conv" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="conv-title">
+    <div class="sheet-head">
+      <h2 id="conv-title">English → bref</h2>
+      <button type="button" id="conv-close" class="icon" aria-label="Close converter">&times;</button>
+    </div>
+    <div class="lblrow"><span class="lbl">English</span></div>
+    <textarea id="conv-in" spellcheck="false"
+              placeholder="Type or paste English here…"></textarea>
+    <div class="lblrow">
+      <span class="lbl">bref</span>
+      <button type="button" id="conv-copy" class="btn">copy</button>
+    </div>
+    <div id="conv-out" class="out" aria-live="polite"></div>
+    <div id="conv-stats" class="convstats"></div>
+    <p class="convnote">Words the dictionary doesn&rsquo;t carry are left as they are and
+    <span class="unk" style="text-decoration:underline dotted;text-underline-offset:3px">underlined</span>.
+    bref is written entirely in lower case, and apostrophes are dropped from
+    contractions and possessives.</p>
+  </div>
+</div>
+
 <script>
 (async function() {
   const $ = (s) => document.querySelector(s);
   const resultsEl = $('#results');
   const stats = $('#stats');
   const qInput = $('#q');
-  const dirInputs = document.querySelectorAll('input[name=dir]');
-  const kindInputs = document.querySelectorAll('input[name=kind]');
-  const transSearch = $('#trans-search');
 
   let DATA = null;
   try {
@@ -152,19 +225,16 @@
     '<br>Shared freely by the author: “This is not a commercial product. It is not ' +
     'for sale… It is completely free to explore and find what is useful.”';
 
-  stats.textContent = DATA.counts.words.toLocaleString() + ' words · '
-                    + DATA.counts.phrases.toLocaleString() + ' phrases';
+  stats.textContent = DATA.counts.words.toLocaleString() + ' words';
 
   // bref is a bijection, so each stored pair yields one entry per direction.
   const entries = [];
-  for (const [kind, list] of [['word', DATA.words], ['phrase', DATA.phrases]]) {
-    for (const [english, bref] of list) {
-      const enLow = english.toLowerCase(), brefLow = bref.toLowerCase();
-      entries.push({ dir: 'en', kind, head: english, other: bref,
-                     headLow: enLow, otherLow: brefLow });
-      entries.push({ dir: 'bref', kind, head: bref, other: english,
-                     headLow: brefLow, otherLow: enLow });
-    }
+  for (const [english, bref] of DATA.words) {
+    const enLow = english.toLowerCase(), brefLow = bref.toLowerCase();
+    entries.push({ dir: 'en', head: english, other: bref,
+                   headLow: enLow, otherLow: brefLow });
+    entries.push({ dir: 'bref', head: bref, other: english,
+                   headLow: brefLow, otherLow: enLow });
   }
 
   const highlight = (text, q) => {
@@ -174,6 +244,7 @@
     return escaped.replace(re, '<mark>$1</mark>');
   };
 
+  // Head matches outrank matches on the far side of the entry.
   function score(e, q) {
     if (!q) return 1;
     const headLow = e.headLow;
@@ -182,12 +253,10 @@
     if (headLow.startsWith(q)) return 500;
     const pos = headLow.indexOf(q);
     if (pos >= 0) return 250 - pos;
-    if (transSearch.checked) {
-      const other = e.otherLow;
-      if (other === q) return 120;
-      if (other.startsWith(q)) return 60;
-      if (other.includes(q)) return 20;
-    }
+    const other = e.otherLow;
+    if (other === q) return 120;
+    if (other.startsWith(q)) return 60;
+    if (other.includes(q)) return 20;
     return 0;
   }
 
@@ -200,7 +269,6 @@
       '<div class="head">' +
         '<span class="' + headCls + '">' + highlight(e.head, q) + '</span>' +
         '<span class="dir">' + label + '</span>' +
-        '<span class="kind">' + e.kind + '</span>' +
       '</div>' +
       '<div class="translations">' +
         '<span class="' + otherCls + '">' + highlight(e.other, q) +
@@ -212,13 +280,9 @@
   const LIMIT = 200;
   function render() {
     const q = qInput.value.trim().toLowerCase();
-    const dir = document.querySelector('input[name=dir]:checked').value;
-    const kind = document.querySelector('input[name=kind]:checked').value;
 
     const matches = [];
     for (const e of entries) {
-      if (dir !== 'both' && e.dir !== dir) continue;
-      if (kind !== 'all' && e.kind !== kind) continue;
       const s = score(e, q);
       if (s > 0) matches.push([s, e]);
     }
@@ -240,16 +304,160 @@
   }
 
   qInput.addEventListener('input', render);
-  dirInputs.forEach(r => r.addEventListener('change', render));
-  kindInputs.forEach(r => r.addEventListener('change', render));
-  transSearch.addEventListener('change', render);
   render();
+
+  // ---------------------------------------------------------------------- //
+  // Converter: English in, bref out.
+  // ---------------------------------------------------------------------- //
+
+  // Case-sensitive first, so "March" (mar) stays distinct from "march" (mrc);
+  // the lowercase map prefers the entry that is already written lower case, so
+  // a sentence-initial "The" still resolves to the everyday word.
+  const EXACT = new Map(), LOWER = new Map();
+  for (const [english, bref] of DATA.words) {
+    EXACT.set(english, bref);
+    const low = english.toLowerCase();
+    if (!LOWER.has(low) || english === low) LOWER.set(low, bref);
+  }
+
+  // Lower-case stand-ins for the characters that would need a shift key.
+  const PUNCT = { '?': '/', '!': '//', '%': ',,', ':': ';;',
+                  '(': '[[', ')': ']]', '$': '==' };
+  const punct = (s) => s.replace(/[?!%:()$]/g, (c) => PUNCT[c]);
+
+  const WORD_RE = /[A-Za-z]+(?:'[A-Za-z]+)*/g;
+
+  function compressWord(w) {
+    let b = EXACT.get(w);
+    if (b !== undefined) return { text: b, known: true };
+    b = LOWER.get(w.toLowerCase());
+    if (b !== undefined) return { text: b, known: true };
+    if (w.indexOf("'") >= 0) {
+      const bare = w.replace(/'/g, '');
+      b = EXACT.get(bare);
+      if (b === undefined) b = LOWER.get(bare.toLowerCase());
+      if (b !== undefined) return { text: b, known: true };
+      // Apostrophes are dropped even when the word isn't in the dictionary.
+      return { text: bare.toLowerCase(), known: false };
+    }
+    return { text: w.toLowerCase(), known: false };
+  }
+
+  function compress(text) {
+    const tokens = [];
+    let i = 0, m;
+    WORD_RE.lastIndex = 0;
+    while ((m = WORD_RE.exec(text)) !== null) {
+      if (m.index > i) {
+        tokens.push({ text: punct(text.slice(i, m.index)), sep: true });
+      }
+      const r = compressWord(m[0]);
+      tokens.push({ text: r.text, sep: false, known: r.known });
+      i = m.index + m[0].length;
+    }
+    if (i < text.length) tokens.push({ text: punct(text.slice(i)), sep: true });
+    return tokens;
+  }
+
+  const conv = $('#conv');
+  const convIn = $('#conv-in');
+  const convOut = $('#conv-out');
+  const convStats = $('#conv-stats');
+  const convCopy = $('#conv-copy');
+  const STORE_KEY = 'bref-converter-input';
+
+  let plainOut = '';
+
+  function runConverter() {
+    const text = convIn.value;
+    try { localStorage.setItem(STORE_KEY, text); } catch (e) {}
+
+    if (!text.trim()) {
+      plainOut = '';
+      convOut.innerHTML = '<span class="ph">bref appears here as you type.</span>';
+      convStats.textContent = '';
+      return;
+    }
+
+    const tokens = compress(text);
+    plainOut = tokens.map((t) => t.text).join('');
+    convOut.innerHTML = tokens.map((t) =>
+      t.sep || t.known ? escapeHTML(t.text)
+                       : '<span class="unk">' + escapeHTML(t.text) + '</span>'
+    ).join('');
+
+    const wordTokens = tokens.filter((t) => !t.sep);
+    const unknown = wordTokens.filter((t) => !t.known).length;
+    const before = text.length, after = plainOut.length;
+    const saved = before > 0 ? Math.round((1 - after / before) * 100) : 0;
+    let line = before.toLocaleString() + ' → ' + after.toLocaleString()
+             + ' characters · ' + saved + '% shorter';
+    if (wordTokens.length) {
+      line += ' · ' + (wordTokens.length - unknown).toLocaleString() + ' of '
+            + wordTokens.length.toLocaleString() + ' words abbreviated';
+    }
+    convStats.textContent = line;
+  }
+
+  const isConvOpen = () => !conv.hidden;
+
+  function openConv() {
+    conv.hidden = false;
+    document.body.classList.add('modal-open');
+    runConverter();
+    convIn.focus();
+  }
+
+  function closeConv() {
+    conv.hidden = true;
+    document.body.classList.remove('modal-open');
+    qInput.focus();
+  }
+
+  try {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved) convIn.value = saved;
+  } catch (e) {}
+
+  $('#conv-open').addEventListener('click', openConv);
+  $('#conv-close').addEventListener('click', closeConv);
+  conv.addEventListener('click', (e) => { if (e.target === conv) closeConv(); });
+  convIn.addEventListener('input', runConverter);
+
+  convCopy.addEventListener('click', async () => {
+    if (!plainOut) return;
+    try {
+      await navigator.clipboard.writeText(plainOut);
+    } catch (e) {
+      // Clipboard API needs a secure context; fall back to a temporary field.
+      const ta = document.createElement('textarea');
+      ta.value = plainOut;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e2) {}
+      document.body.removeChild(ta);
+    }
+    const was = convCopy.textContent;
+    convCopy.textContent = 'copied';
+    setTimeout(() => { convCopy.textContent = was; }, 1200);
+  });
+
+  // ---------------------------------------------------------------------- //
 
   const focusSearch = () => { qInput.focus(); qInput.select(); };
 
-  // "/" focuses the search box (unless the user's already typing in an input).
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isConvOpen()) {
+      e.preventDefault();
+      closeConv();
+      return;
+    }
+    // "/" focuses the search box (unless the user's already typing in a field).
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (isConvOpen()) return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     e.preventDefault();
@@ -258,10 +466,12 @@
 
   // Re-grab focus whenever the page becomes visible/focused again. This is also
   // what raises the on-screen keyboard when the app is launched from a home
-  // screen shortcut, which is the point: open it and start typing.
-  window.addEventListener('focus', focusSearch);
+  // screen shortcut, which is the point: open it and start typing. While the
+  // converter is up, its own field is the one that should get focus.
+  const refocus = () => { if (isConvOpen()) convIn.focus(); else focusSearch(); };
+  window.addEventListener('focus', refocus);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') focusSearch();
+    if (document.visibilityState === 'visible') refocus();
   });
 })();
 

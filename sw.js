@@ -1,4 +1,4 @@
-const CACHE = 'bref-dict-v2';
+const CACHE = 'bref-dict-v3';
 const ASSETS = [
   './',
   './index.html',

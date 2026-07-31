@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """Generate dictionary.json (and the app icons) for the bref dictionary PWA.
 
-bref is a strict bijection — every brief expands to exactly one English word or
-phrase — so the data file stores each pair once and the app derives both search
+bref is a strict bijection — every brief expands to exactly one English word —
+so the data file stores each pair once and the app derives both search
 directions at load time. That keeps the offline cache small.
+
+The author also publishes a 3,037-entry phrase list; it is not carried here, to
+keep the app to a single searchable word list. It is in the Drive folder below
+for anyone who wants it.
 
 Run:  python3 build_dictionary.py
 """
@@ -41,40 +45,52 @@ def pairs(path, english_first):
 
 words = dict(pairs(os.path.join(SRC, "11661 WORDS FORWARD.txt"), True))
 rev = dict(pairs(os.path.join(SRC, "11661 WORDS REVERSED.txt"), False))
-# The phrase lists use the opposite column order from the word lists.
-phrases = dict(pairs(os.path.join(SRC, "3041 PHRASESREV.txt"), True))
 
 words["exam"] = "xm"                     # source typo: "exam = xmexam = xm"
 words["government"] = rev["government"]  # FORWARD gvr vs REVERSED gvt
+
+# "a" is the one word the lists leave out — it is its own brief, so it was
+# presumably skipped as a no-op. The manual gives it in both the alphabet table
+# ("a = a") and the most-frequent-words list, and the brief "a" is unused, so
+# restore it. Without it the converter flags every "a" as an unknown word.
+words.setdefault("a", "a")
 
 disagree = {k for k in words if k in rev and words[k] != rev[k]} - {"exam"}
 if disagree:
     print(f"  ! forward/reversed disagree on: {sorted(disagree)}")
 
-# bref's defining property: no brief may expand to two different things.
+# bref's defining property: no brief may expand to two different words.
 seen = {}
 collisions = 0
-for kind, table in (("word", words), ("phrase", phrases)):
-    for eng, brf in table.items():
-        if brf in seen:
-            print(f"  ! collision {brf!r}: {seen[brf]} vs {kind} {eng!r}")
-            collisions += 1
-        seen[brf] = f"{kind} {eng!r}"
-print(f"{len(words)} words, {len(phrases)} phrases, "
-      f"{len(seen)} unique briefs, {collisions} collisions")
+for eng, brf in words.items():
+    if brf in seen:
+        print(f"  ! collision {brf!r}: {seen[brf]} vs {eng!r}")
+        collisions += 1
+    seen[brf] = repr(eng)
+print(f"{len(words)} words, {len(seen)} unique briefs, {collisions} collisions")
+
+# The converter matches case-sensitively first, so "March" (mar) and "march"
+# (mrc) stay distinct. Report any pair that only differs by case, since those
+# are the entries where a sentence-initial capital is genuinely ambiguous.
+lower_groups = {}
+for eng in words:
+    lower_groups.setdefault(eng.lower(), []).append(eng)
+ambiguous = {k: v for k, v in lower_groups.items() if len(v) > 1}
+if ambiguous:
+    print("  case-ambiguous entries: " + ", ".join(
+        f"{'/'.join(v)} = {'/'.join(words[e] for e in v)}"
+        for v in ambiguous.values()))
 
 data = {
     "source": "bref shorthand by Donald M. Volk (draft #1, 22 January 2020)",
     "source_url": REDDIT,
     "materials_url": DRIVE,
-    "note": ("Every brief expands to exactly one English word or phrase, so each "
-             "pair is stored once and both search directions are derived at load "
-             "time. Where the manual's prose and the dictionary files disagree, "
-             "the dictionary files are used."),
-    "counts": {"words": len(words), "phrases": len(phrases)},
+    "note": ("Every brief expands to exactly one English word, so each pair is "
+             "stored once and both search directions are derived at load time. "
+             "Where the manual's prose and the dictionary files disagree, the "
+             "dictionary files are used."),
+    "counts": {"words": len(words)},
     "words": sorted(([e, b] for e, b in words.items()), key=lambda p: p[0].lower()),
-    "phrases": sorted(([e, b] for e, b in phrases.items()),
-                      key=lambda p: p[0].lower()),
 }
 
 out = os.path.join(HERE, "dictionary.json")
